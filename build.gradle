@@ -67,6 +67,7 @@ libraries = [
 json:               'org.json:json:20090211',
 lift_json:          'net.liftweb:lift-json_2.8.1:2.2',
 gson:               'com.google.code.gson:gson:1.6',
+guice:              'com.google.inject:guice:3.0',
 zk:                 'org.apache.zookeeper:zookeeper:3.3.1',
 log4j:              'log4j:log4j:1.2.15',
 junit:              'junit:junit:3.8.1',
@@ -82,6 +83,7 @@ commons_logging:    'commons-logging:commons-logging:1.1.1',
 commons_jexl:       'commons-jexl:commons-jexl:1.1',
 commons_codec:      'commons-codec:commons-codec:1.4',
 commons_httpclient: 'commons-httpclient:commons-httpclient:3.1',
+commons_config:     'commons-configuration:commons-configuration:1.6',
 spring:             'org.springframework:spring:2.5.6',
 junit:              'junit:junit:4.4',
 scala_compiler:     'org.scala-lang:scala-compiler:2.8.1',
@@ -110,6 +112,8 @@ subprojects {
     dependencies { 
         compile( libraries.log4j )
         compile( libraries.commons_logging )
+        compile( libraries.commons_config )
+        compile( libraries.guice )
         compile( libraries.spring )
         testCompile( libraries.junit )
     }
