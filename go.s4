@@ -1,14 +1,23 @@
 #!/bin/bash -v
 
-gradle :s4-core:build
+gradle :s4-core:assemble :s4-example-twittertopiccount:assemble
 
 /bin/rm -f out.s4
 /bin/rm -f out.adaptor
 /bin/rm -f /tmp/top_n_hashtags
-/bin/rm -f build/s4-image/s4-core/logs/s4-core/*.log
+/bin/rm -f build/s4-image/s4-core/logs/s4-core/*.{log,mon}
 /bin/rm -fr tmp????
 /bin/cp -f s4-core/build/libs/s4-core-0.3-SNAPSHOT.jar build/s4-image/s4-core/lib
 /bin/cp -rpf s4-core/src/main/resources/s4-core/conf build/s4-image/s4-core
+
+mkdir -p build/s4-image/s4-apps/s4-example-twittertopiccount/lib
+/bin/cp -f s4-examples/twittertopiccount/build/libs/s4-example-twittertopiccount-0.3-SNAPSHOT.jar build/s4-image/s4-apps/s4-example-twittertopiccount/lib/
+
+/bin/cp -f s4-examples/twittertopiccount/src/main/resources/*.xml build/s4-image/s4-apps/s4-example-twittertopiccount
+
+/bin/cp -f ~/tmp/adapter-conf.xml build/s4-image/s4-apps/s4-example-twittertopiccount
+
+chmod u+x build/s4-image/scripts/*.sh
 
 PROPS_DIR="."
 
@@ -22,6 +31,7 @@ killall java
 java -server -cp $CP -XX:+HeapDumpOnOutOfMemoryError -XX:+UseConcMarkSweepGC -XX:-UseGCOverheadLimit  -Xms800m -Xmx2000m  -Dcommlayer.mode=static  -Dzk.session.timeout=5000  -Dlock_dir=${S4_CORE}/lock  -Dlog_loc=${S4_CORE}/logs -DDequeuerCount=6 -Dlog4j.configuration=file:${S4_CORE}/conf/default/log4j.xml io.s4.MainApp -c ${S4_CORE} -a ${S4_APPS} -e ./build/s4-image/s4-exts -t default -d wall &
 
 sleep 10
+dot -T png s4.dot > s4.png &
 
 # adaptor
 build/s4-image/scripts/run-adapter.sh -x -u  build/s4-image/s4-apps/s4-example-twittertopiccount/lib/s4-example-twittertopiccount-0.3-SNAPSHOT.jar -d build/s4-image/s4-apps/s4-example-twittertopiccount/adapter-conf.xml &

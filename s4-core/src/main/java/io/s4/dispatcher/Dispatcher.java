@@ -30,6 +30,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.google.inject.Inject;
+
 public class Dispatcher implements EventDispatcher {
     private EventEmitter eventEmitter;
     private Transformer[] transformers = new Transformer[0];
@@ -39,15 +41,17 @@ public class Dispatcher implements EventDispatcher {
     private String loggerName = "s4";
 
     public final static String PARTITION_INFO_KEY = "S4__PartitionInfo";
-
+    
     public void setTransformers(Transformer[] transformers) {
         this.transformers = transformers;
     }
 
+    @Inject
     public void setPartitioners(Partitioner[] partitioners) {
         this.partitioners = partitioners;
     }
 
+    @Inject
     public void setEventEmitter(EventEmitter eventEmitter) {
         this.eventEmitter = eventEmitter;
     }
@@ -66,10 +70,6 @@ public class Dispatcher implements EventDispatcher {
 
     private volatile int eventCount = 0;
     private volatile int rawEventCount = 0;
-
-    public Dispatcher() {
-
-    }
 
     int counts[];
 

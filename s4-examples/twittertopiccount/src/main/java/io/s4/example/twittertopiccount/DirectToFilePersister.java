@@ -24,11 +24,20 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 import io.s4.persist.Persister;
 
 public class DirectToFilePersister implements Persister {
     private String outputFilename;
     private int persistCount;
+
+    @Inject
+    public DirectToFilePersister(@Named("outputFilename") String outputFilename) {
+        super();
+        this.outputFilename = outputFilename;
+    }
 
     public void setOutputFilename(String outputFilename) {
         this.outputFilename = outputFilename;

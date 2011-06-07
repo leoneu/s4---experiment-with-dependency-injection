@@ -15,6 +15,17 @@
  */
 package io.s4;
 
+import io.s4.dispatcher.partitioner.DefaultHasher;
+import io.s4.dispatcher.partitioner.Hasher;
+import io.s4.emitter.CommLayerEmitter;
+import io.s4.emitter.EventEmitter;
+import io.s4.listener.CommLayerListener;
+import io.s4.listener.EventListener;
+import io.s4.logger.Log4jMonitor;
+import io.s4.logger.Monitor;
+import io.s4.processor.PEContainer;
+import io.s4.serialize.KryoSerDeser;
+import io.s4.serialize.SerializerDeserializer;
 import io.s4.util.clock.Clock;
 import io.s4.util.clock.WallClock;
 
@@ -27,7 +38,6 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Binder;
-import com.google.inject.Provides;
 import com.google.inject.name.Names;
 
 /**
@@ -37,15 +47,16 @@ import com.google.inject.name.Names;
  * 
  * @author Leo Neumeyer
  */
-public class s4Module extends AbstractModule {
+public class S4Module extends AbstractModule {
 
+    final static String S4_PROPERTIES_FILE = "/s4-core.properties";
     protected PropertiesConfiguration config = null;
-
+    
     private void loadProperties(Binder binder) {
 
         try {
             InputStream is = this.getClass().getResourceAsStream(
-                    "/s4-core.properties");
+                    S4_PROPERTIES_FILE);
             config = new PropertiesConfiguration();
             config.load(is);
 
@@ -68,10 +79,42 @@ public class s4Module extends AbstractModule {
 
         /* Set up bindings. */
         
-        /*
-         * This tells Guice that whenever it sees a dependency on a Clock,
-         * it should satisfy the dependency using a WallClock.
-         */
-       bind(Clock.class).to(WallClock.class);
+        bind(Application.class);
+        
+        // Constructor:
+        // public KryoSerDeser(
+        // @Named("kryo.initial_buffer_size") int initialBufferSize,
+        // @Named("kryo.max_buffer_size") int maxBufferSize)
+        bind(SerializerDeserializer.class).to(KryoSerDeser.class);
+        
+        // No arg contructor
+        bind(Clock.class).to(WallClock.class);
+        
+        // Constructor:
+        // CommLayerEmitter(SerializerDeserializer serDeser, CommLayerListener listener, 
+        // @Named("s4_app_name") String listenerAppName, Monitor monitor) 
+        bind(EventEmitter.class).to(CommLayerEmitter.class);
+        
+        // Constructor:
+        // public CommLayerListener(
+        // @Named("listener_max_queue_size") int maxQueueSize,
+        // @Named("zk.address") String clusterManagerAddress, String appName,
+        // Monitor monitor, SerializerDeserializer serDeser) 
+        bind(EventListener.class).to(CommLayerListener.class);
+        
+        // Constructor:
+        // Log4jMonitor(@Named("logger.name") String loggerName,
+        // @Named("logger.flush_interval") int flushInterval)
+        bind(Monitor.class).to(Log4jMonitor.class);
+        
+        // No arg contructor
+        bind(Hasher.class).to(DefaultHasher.class);
+        
+        // Constructor:
+        // public PEContainer(Monitor monitor, Clock clock,
+        // @Named("pe_container.max_queue_size") int maxQueueSize,
+        // @Named("pe_container.track_by_key") boolean trackByKey) {
+        bind(PEContainer.class).asEagerSingleton();
+
     }
 }

@@ -56,6 +56,10 @@ public class PrototypeWrapper {
         }
     }
 
+    public ProcessingElement getPE() {
+        return prototype;
+    }
+    
     /**
      * Find PE corresponding to keyValue. If no such PE exists, then a new one
      * is created by cloning the prototype and this is returned. As a

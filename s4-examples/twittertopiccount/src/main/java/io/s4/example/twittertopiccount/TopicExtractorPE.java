@@ -15,19 +15,31 @@
  */
 package io.s4.example.twittertopiccount;
 
+import org.apache.log4j.Logger;
+
+import com.google.inject.Inject;
+
 import io.s4.dispatcher.Dispatcher;
 import io.s4.dispatcher.EventDispatcher;
 import io.s4.processor.AbstractPE;
 
 public class TopicExtractorPE extends AbstractPE {
+    
+    @Inject
+    public TopicExtractorPE() {
+        logger.debug("Constructor.");
+    }
+    private static Logger logger = Logger.getLogger(TopicExtractorPE.class);
+
     private String id;
     private EventDispatcher dispatcher;
     private String outputStreamName;
-
+    
     public EventDispatcher getDispatcher() {
         return dispatcher;
     }
 
+    @Inject
     public void setDispatcher(EventDispatcher dispatcher) {
         this.dispatcher = dispatcher;
     }
@@ -38,6 +50,7 @@ public class TopicExtractorPE extends AbstractPE {
 
     public void setOutputStreamName(String outputStreamName) {
         this.outputStreamName = outputStreamName;
+        logger.debug("outputStreamName: " + outputStreamName);
     }
 
     public void setId(String id) {
@@ -93,22 +106,22 @@ public class TopicExtractorPE extends AbstractPE {
         }
     }
 
-    public static void main(String args[]) {
-        TopicExtractorPE te = new TopicExtractorPE();
-        te.setDispatcher(new DummyDispatcher());
-        te.setOutputStreamName("test");
-
-        Status status = new Status();
-        status.setText("Hey this is a test");
-        te.processEvent(status);
-
-        status.setText("This is an edge test #");
-        te.processEvent(status);
-
-        status.setText("#GLOB this is a test");
-        te.processEvent(status);
-
-        status.setText("Hey there #FLOB, this is a test #GLOB");
-        te.processEvent(status);
-    }
+    // public static void main(String args[]) {
+    // TopicExtractorPE te = new TopicExtractorPE();
+    // te.setDispatcher(new DummyDispatcher());
+    // te.setOutputStreamName("test");
+    //
+    // Status status = new Status();
+    // status.setText("Hey this is a test");
+    // te.processEvent(status);
+    //
+    // status.setText("This is an edge test #");
+    // te.processEvent(status);
+    //
+    // status.setText("#GLOB this is a test");
+    // te.processEvent(status);
+    //
+    // status.setText("Hey there #FLOB, this is a test #GLOB");
+    // te.processEvent(status);
+    // }
 }

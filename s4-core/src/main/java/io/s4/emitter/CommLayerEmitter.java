@@ -35,9 +35,26 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.log4j.Logger;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 public class CommLayerEmitter implements EventEmitter, Runnable {
     private static Logger logger = Logger.getLogger(CommLayerEmitter.class);
 
+    @Inject
+    CommLayerEmitter(SerializerDeserializer serDeser, CommLayerListener listener, @Named("s4_app_name") String listenerAppName,
+            Monitor monitor) {
+        super();
+        this.serDeser = serDeser;
+        this.listener = listener;
+        this.listenerAppName = listenerAppName;
+        this.monitor = monitor;
+        
+        init();
+    }
+
+    public CommLayerEmitter() {}
+    
     // config for emitter is coupled with listener, if there is a non-null
     // listener. This prevents 2 tasks from being checked out of the cluster
     // config for the same node: one for the listener and another for the
@@ -93,8 +110,7 @@ public class CommLayerEmitter implements EventEmitter, Runnable {
         try {
             if (monitor != null) {
                 monitor.set(low_level_emitter_qsz.toString(),
-                            messageQueue.size(),
-                            S4_CORE_METRICS.toString());
+                        messageQueue.size(), S4_CORE_METRICS.toString());
             }
         } catch (Exception e) {
             logger.error("Exception in monitor metrics on thread "
@@ -116,15 +132,13 @@ public class CommLayerEmitter implements EventEmitter, Runnable {
             queueMessage(mh);
         } catch (RuntimeException rte) {
             if (monitor != null) {
-                monitor.increment(low_level_emitter_out_err_ct.toString(),
-                                  1,
-                                  S4_EVENT_METRICS.toString(),
-                                  "et",
-                                  eventWrapper.getStreamName());
+                monitor.increment(low_level_emitter_out_err_ct.toString(), 1,
+                        S4_EVENT_METRICS.toString(), "et",
+                        eventWrapper.getStreamName());
             }
-            Logger.getLogger("s4").error("Error serializing or emitting event "
-                                                 + eventWrapper.getEvent(),
-                                         rte);
+            Logger.getLogger("s4").error(
+                    "Error serializing or emitting event "
+                            + eventWrapper.getEvent(), rte);
             throw rte;
         }
     }
@@ -151,9 +165,8 @@ public class CommLayerEmitter implements EventEmitter, Runnable {
             if (listenerAppName == null) {
                 listenerAppName = appName;
             }
-            sender = new SenderProcess(clusterManagerAddress,
-                                       appName,
-                                       listenerAppName);
+            sender = new SenderProcess(clusterManagerAddress, appName,
+                    listenerAppName);
             Map<String, String> map = new HashMap<String, String>();
             map.put("SenderId", "" + senderId);
             sender.setSerializer(new PassThroughSerializer());
@@ -177,12 +190,11 @@ public class CommLayerEmitter implements EventEmitter, Runnable {
             }
             logger.info("Creating sender process with " + listenerConfig);
 
-            String destinationAppName = (listenerAppName != null
-                    ? listenerAppName : listener.getAppName());
+            String destinationAppName = (listenerAppName != null ? listenerAppName
+                    : listener.getAppName());
 
             sender = new SenderProcess(listener.getClusterManagerAddress(),
-                                       listener.getAppName(),
-                                       destinationAppName);
+                    listener.getAppName(), destinationAppName);
 
             sender.setSerializer(new PassThroughSerializer());
             sender.createSenderFromConfig(listenerConfig);
@@ -198,28 +210,27 @@ public class CommLayerEmitter implements EventEmitter, Runnable {
                     isSent = sender.send(rawMessage);
                 } else {
                     isSent = sender.sendToPartition(mh.getPartitionId(),
-                                                    rawMessage);
+                            rawMessage);
                 }
 
                 if (isSent) {
                     if (monitor != null) {
-                        monitor.increment(low_level_emitter_msg_out_ct.toString(),
-                                          1,
-                                          S4_CORE_METRICS.toString());
+                        monitor.increment(
+                                low_level_emitter_msg_out_ct.toString(), 1,
+                                S4_CORE_METRICS.toString());
                     }
                 } else {
                     if (monitor != null) {
-                        monitor.increment(low_level_emitter_out_err_ct.toString(),
-                                          1,
-                                          S4_CORE_METRICS.toString());
+                        monitor.increment(
+                                low_level_emitter_out_err_ct.toString(), 1,
+                                S4_CORE_METRICS.toString());
                     }
                     logger.warn("commlayer emit failed ...");
                 }
             } catch (InterruptedException ie) {
                 if (monitor != null) {
                     monitor.increment(low_level_emitter_out_err_ct.toString(),
-                                      1,
-                                      S4_CORE_METRICS.toString());
+                            1, S4_CORE_METRICS.toString());
                 }
                 Thread.currentThread().interrupt();
             } catch (Exception e) {

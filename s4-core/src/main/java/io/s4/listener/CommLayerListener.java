@@ -40,6 +40,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 public class CommLayerListener implements EventListener, Runnable {
     private static Logger logger = Logger.getLogger(CommLayerListener.class);
     private int dequeuerCount = 12;
@@ -52,8 +55,23 @@ public class CommLayerListener implements EventListener, Runnable {
     private Object listenerConfig;
     private Monitor monitor;
     private int partitionId = -1;
-    private int zkConnected = 1;
+    // private int zkConnected = 1;
     private SerializerDeserializer serDeser;
+
+    @Inject
+    public CommLayerListener(
+            @Named("listener.max_queue_size") int maxQueueSize,
+            @Named("zk.address") String clusterManagerAddress, String appName,
+            Monitor monitor, SerializerDeserializer serDeser) {
+        super();
+        this.maxQueueSize = maxQueueSize;
+        this.clusterManagerAddress = clusterManagerAddress;
+        this.appName = appName;
+        this.monitor = monitor;
+        this.serDeser = serDeser;
+
+        init();
+    }
 
     public void setSerDeser(SerializerDeserializer serDeser) {
         this.serDeser = serDeser;
@@ -122,9 +140,8 @@ public class CommLayerListener implements EventListener, Runnable {
                                     + event.get("source"));
                             logger.error("System exiting so that process can restart.");
                             if (monitor != null) {
-                                monitor.set(s4_core_exit_ct.toString(),
-                                            1,
-                                            S4_CORE_METRICS.toString());
+                                monitor.set(s4_core_exit_ct.toString(), 1,
+                                        S4_CORE_METRICS.toString());
                             }
                             // should flush stats before exiting
                             monitor.flushStats();
@@ -148,7 +165,8 @@ public class CommLayerListener implements EventListener, Runnable {
         t.start();
 
         if (System.getProperty("DequeuerCount") != null) {
-            dequeuerCount = Integer.parseInt(System.getProperty("DequeuerCount"));
+            dequeuerCount = Integer.parseInt(System
+                    .getProperty("DequeuerCount"));
         }
 
         System.out.println("dequeuer number: " + dequeuerCount);
@@ -195,23 +213,21 @@ public class CommLayerListener implements EventListener, Runnable {
                 isAddMessageSucceeded = messageQueue.offer(message);
                 if (monitor != null) {
                     monitor.set(low_level_listener_qsz.toString(),
-                                messageQueue.size(),
-                                S4_CORE_METRICS.toString());
+                            messageQueue.size(), S4_CORE_METRICS.toString());
                     if (isAddMessageSucceeded) {
-                        monitor.increment(low_level_listener_msg_in_ct.toString(),
-                                          1,
-                                          S4_CORE_METRICS.toString());
+                        monitor.increment(
+                                low_level_listener_msg_in_ct.toString(), 1,
+                                S4_CORE_METRICS.toString());
                     } else {
-                        monitor.increment(low_level_listener_msg_drop_ct.toString(),
-                                          1,
-                                          S4_CORE_METRICS.toString());
+                        monitor.increment(
+                                low_level_listener_msg_drop_ct.toString(), 1,
+                                S4_CORE_METRICS.toString());
                     }
                 }
             } catch (Exception e) {
-                Logger.getLogger("s4")
-                      .error("Exception in monitor metrics on thread "
-                                     + Thread.currentThread().getId(),
-                             e);
+                Logger.getLogger("s4").error(
+                        "Exception in monitor metrics on thread "
+                                + Thread.currentThread().getId(), e);
             }
         }
     }
@@ -247,12 +263,11 @@ public class CommLayerListener implements EventListener, Runnable {
                 eventWrapper = (EventWrapper) serDeser.deserialize(rawMessage);
 
             } catch (RuntimeException rte) {
-                Logger.getLogger("s4")
-                      .error("Error converting message to an event: ", rte);
+                Logger.getLogger("s4").error(
+                        "Error converting message to an event: ", rte);
                 if (monitor != null) {
                     monitor.increment(low_level_listener_badmsg_ct.toString(),
-                                      1,
-                                      S4_CORE_METRICS.toString());
+                            1, S4_CORE_METRICS.toString());
                 }
                 return;
             }
@@ -262,8 +277,8 @@ public class CommLayerListener implements EventListener, Runnable {
                     try {
                         handler.processEvent(eventWrapper);
                     } catch (Exception e) {
-                        Logger.getLogger("s4")
-                              .error("Error calling processEvent on handler", e);
+                        Logger.getLogger("s4").error(
+                                "Error calling processEvent on handler", e);
                     }
                 }
             }

@@ -17,17 +17,12 @@ package io.s4;
 
 import io.s4.processor.PEContainer;
 import io.s4.processor.ProcessingElement;
+import io.s4.processor.PrototypeWrapper;
 import io.s4.util.S4Util;
-import io.s4.util.Watcher;
 import io.s4.util.clock.Clock;
-//import io.s4.util.clock.EventClock;
 
-import java.io.File;
-//import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.io.InputStream;
 import java.util.List;
-import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -35,65 +30,51 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.FileSystemXmlApplicationContext;
-import org.springframework.core.io.ClassPathResource;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
-import com.google.inject.Guice;
 import com.google.inject.Injector;
-
 
 public class MainApp {
 
-    /* Core configuration file must be in the classpath. */
-    final private static String S4_CORE_PROPERTIES = "s4-core.properties";
-    
-    private static String coreHome = "../s4-core";
-    private static String appsHome = "../s4-apps";
-    private static String extsHome = "../s4-exts";
+    private static Logger logger = Logger.getLogger("io.s4");
 
     @SuppressWarnings("static-access")
     public static void main(String args[]) throws Exception {
+
+        /* Set up logger basic configuration. */
+        BasicConfigurator.configure();
+        logger.setLevel(Level.DEBUG);
+
         Options options = new Options();
-        
-//        options.addOption("c",
-//                "corehome",
-//                true, "core home" );
 
-        options.addOption(OptionBuilder.withArgName("corehome")
-                                       .hasArg()
-                                       .withDescription("core home")
-                                       .create("c"));
+        // options.addOption("c",
+        // "corehome",
+        // true, "core home" );
 
-        options.addOption(OptionBuilder.withArgName("appshome")
-                                       .hasArg()
-                                       .withDescription("applications home")
-                                       .create("a"));
+        options.addOption(OptionBuilder.withArgName("corehome").hasArg()
+                .withDescription("core home").create("c"));
 
-        options.addOption(OptionBuilder.withArgName("s4clock")
-                                       .hasArg()
-                                       .withDescription("s4 clock")
-                                       .create("d"));
+        options.addOption(OptionBuilder.withArgName("appshome").hasArg()
+                .withDescription("applications home").create("a"));
 
-        options.addOption(OptionBuilder.withArgName("seedtime")
-                                       .hasArg()
-                                       .withDescription("event clock initialization time")
-                                       .create("s"));        
-        
-        options.addOption(OptionBuilder.withArgName("extshome")
-                                       .hasArg()
-                                       .withDescription("extensions home")
-                                       .create("e"));
+        options.addOption(OptionBuilder.withArgName("s4clock").hasArg()
+                .withDescription("s4 clock").create("d"));
 
-        options.addOption(OptionBuilder.withArgName("instanceid")
-                                       .hasArg()
-                                       .withDescription("instance id")
-                                       .create("i"));
+        options.addOption(OptionBuilder.withArgName("seedtime").hasArg()
+                .withDescription("event clock initialization time").create("s"));
 
-        options.addOption(OptionBuilder.withArgName("configtype")
-                                       .hasArg()
-                                       .withDescription("configuration type")
-                                       .create("t"));
+        options.addOption(OptionBuilder.withArgName("extshome").hasArg()
+                .withDescription("extensions home").create("e"));
+
+        options.addOption(OptionBuilder.withArgName("instanceid").hasArg()
+                .withDescription("instance id").create("i"));
+
+        options.addOption(OptionBuilder.withArgName("configtype").hasArg()
+                .withDescription("configuration type").create("t"));
 
         CommandLineParser parser = new GnuParser();
         CommandLine commandLine = null;
@@ -118,41 +99,24 @@ public class MainApp {
         }
 
         if (commandLine.hasOption("c")) {
-            coreHome = commandLine.getOptionValue("c");
+            //coreHome = commandLine.getOptionValue("c");
         }
 
         if (commandLine.hasOption("a")) {
-            appsHome = commandLine.getOptionValue("a");
+           //appsHome = commandLine.getOptionValue("a");
         }
-        
+
         if (commandLine.hasOption("d")) {
             clockType = commandLine.getOptionValue("d");
         }
 
         if (commandLine.hasOption("e")) {
-            extsHome = commandLine.getOptionValue("e");
+            //extsHome = commandLine.getOptionValue("e");
         }
 
         String configType = "typical";
         if (commandLine.hasOption("t")) {
             configType = commandLine.getOptionValue("t");
-        }
-        
-        //long seedTime = 0;
-//        if (commandLine.hasOption("s")) {
-//            seedTime = Long.parseLong(commandLine.getOptionValue("s"));
-//        }
-
-        File coreHomeFile = new File(coreHome);
-        if (!coreHomeFile.isDirectory()) {
-            System.err.println("Bad core home: " + coreHome);
-            System.exit(1);
-        }
-
-        File appsHomeFile = new File(appsHome);
-        if (!appsHomeFile.isDirectory()) {
-            System.err.println("Bad applications home: " + appsHome);
-            System.exit(1);
         }
 
         if (instanceId > -1) {
@@ -168,146 +132,46 @@ public class MainApp {
             // System.exit(1);
         }
 
-        // String s4ConfigXml = (String) loArgs.get(0);
-        // System.out.println("s4ConfigXml is " + s4ConfigXml);
+        /* Read the name of the application module class from a properties file.
+         * 
+         * TODO: We may change this to retrieving bundles from an apps directory.
+         *
+         */
+        String appModuleName = "";
+        PropertiesConfiguration config = null;
+        try {
+            config = new PropertiesConfiguration();
+            InputStream is = config.getClass().getResourceAsStream(
+                    S4Module.S4_PROPERTIES_FILE);
+            config = new PropertiesConfiguration();
+            config.load(is);
+            appModuleName = config.getString("app.module");
 
-        ClassPathResource propResource = new ClassPathResource(S4_CORE_PROPERTIES);
-        Properties prop = new Properties();
-        if (propResource.exists()) {
-            prop.load(propResource.getInputStream());
-        } else {
-            System.err.println("Unable to find " + S4_CORE_PROPERTIES + ". It must be available in classpath.");
+            
+        } catch (ConfigurationException e) {
+            logger.error("Couldn't read configuration file: " + S4Module.S4_PROPERTIES_FILE);
             System.exit(1);
         }
         
-        /* Initialize Guice injector. */
-        Injector injector = Guice.createInjector(new s4Module());
-
-        ApplicationContext coreContext = null;
-        String configBase = coreHome + File.separatorChar + "conf"
-                + File.separatorChar + configType;
-        String configPath = "";
-        List<String> coreConfigUrls = new ArrayList<String>(); 
-        File configFile = null;
-
-         //load clock configuration
-        configPath = configBase + File.separatorChar + clockType + "-clock.xml";            
-        coreConfigUrls.add(configPath);
-
-        // load core config xml
-        configPath = configBase + File.separatorChar + "s4-core-conf.xml";
-        configFile = new File(configPath);
-        if (!configFile.exists()) {
-            System.err.printf("S4 core config file %s does not exist\n",
-                    configPath);
-            System.exit(1);
-        }
-		
-        coreConfigUrls.add(configPath);
-        String[] coreConfigFiles = new String[coreConfigUrls.size()];
-        coreConfigUrls.toArray(coreConfigFiles);
-
-        String[] coreConfigFileUrls = new String[coreConfigFiles.length];
-        for (int i = 0; i < coreConfigFiles.length; i++) {
-            coreConfigFileUrls[i] = "file:" + coreConfigFiles[i];
-        }
-
-        coreContext = new FileSystemXmlApplicationContext(coreConfigFileUrls, coreContext);
-        ApplicationContext context = coreContext;        
+        Injector injector = Application.getInjector(appModuleName);
         
-        // TODO what is this for?
-//        Clock s4Clock = (Clock) context.getBean("clock");
-//        if (s4Clock instanceof EventClock && seedTime > 0) {
-//            EventClock s4EventClock = (EventClock)s4Clock;
-//            s4EventClock.updateTime(seedTime);
-//            System.out.println("Intializing event clock time with seed time " + s4EventClock.getCurrentTime());
-//        }
-        
-        PEContainer peContainer = (PEContainer) context.getBean("peContainer");
+        PEContainer peContainer = injector.getInstance(PEContainer.class);
 
-        Watcher w = (Watcher) context.getBean("watcher");
-        w.setConfigFilename(configPath);
+        /* Initialize the PEContainer. */
+        peContainer.init();
 
+        List<PrototypeWrapper> prototypeWrappers = peContainer
+                .getPrototypeWrappers();
         
-        // load extension modules
-        String[] configFileNames = getModuleConfigFiles(extsHome, prop);
-        if (configFileNames.length > 0) {
-            String[] configFileUrls = new String[configFileNames.length];
-            for (int i = 0; i < configFileNames.length; i++) {
-                configFileUrls[i] = "file:" + configFileNames[i];
-            }
-            context = new FileSystemXmlApplicationContext(configFileUrls,
-                                                          context);
+       logger.debug("Number of PE prototypes: " + prototypeWrappers.size());
+        Clock clock = injector.getInstance(Clock.class);
+
+        for (PrototypeWrapper prototype : prototypeWrappers) {
+
+            ProcessingElement pe = prototype.getPE();
+            pe.setClock(clock); // TODO inject this directly in AbstractPE
+
+            logger.info("Initializing processing Element: " + pe.toString());
         }
-
-        // load application modules
-        configFileNames = getModuleConfigFiles(appsHome, prop);
-        if (configFileNames.length > 0) {
-            String[] configFileUrls = new String[configFileNames.length];
-            for (int i = 0; i < configFileNames.length; i++) {
-                configFileUrls[i] = "file:" + configFileNames[i];
-            }
-            context = new FileSystemXmlApplicationContext(configFileUrls,
-                                                          context);
-            // attach any beans that implement ProcessingElement to the PE
-            // Container
-            String[] processingElementBeanNames = context.getBeanNamesForType(ProcessingElement.class);
-            for (String processingElementBeanName : processingElementBeanNames) {
-                ProcessingElement bean = (ProcessingElement) context.getBean(processingElementBeanName);
-                
-                // put clock get/set in ProcessingElement interface instead of using reflection
-                if(bean.getClock() == null) {
-                    Clock clock= injector.getInstance(Clock.class);
-                    bean.setClock(clock);
-                }
-                
-//                try {
-//                    Method getS4ClockMethod = bean.getClass().getMethod("getS4Clock");
-//    
-//                    if (getS4ClockMethod.getReturnType().equals(Clock.class)) {
-//                        if (getS4ClockMethod.invoke(bean) == null) {
-//                            Method setS4ClockMethod = bean.getClass().getMethod("setS4Clock", Clock.class);
-//                            setS4ClockMethod.invoke(bean, coreContext.getBean("clock"));
-//                        }
-//                    }
-//                }
-//                catch (NoSuchMethodException mnfe) {
-//                    // acceptable
-//                }
-                System.out.println("Adding processing element with bean name "
-                        + processingElementBeanName + ", id "
-                        + ((ProcessingElement) bean).getId());
-                peContainer.addProcessor((ProcessingElement) bean);
-            }
-        }  
     }
-
-    /**
-     * 
-     * @param prop
-     * @return
-     */
-    private static String[] getModuleConfigFiles(String moduleBase, Properties prop) {
-        List<String> configFileList = new ArrayList<String>();
-        File moduleBaseFile = new File(moduleBase);
-
-        // list applications
-        File[] moduleDirs = moduleBaseFile.listFiles();
-        for (File moduleDir : moduleDirs) {
-            if (moduleDir.isDirectory()) {
-                String confFileName = moduleDir.getAbsolutePath() + "/"
-                        + moduleDir.getName() + "-conf.xml";
-                File appsConfFile = new File(confFileName);
-                if (appsConfFile.exists()) {
-                    configFileList.add(appsConfFile.getAbsolutePath());
-                } else {
-                    System.err.println("Invalid application: " + moduleDir);
-                }
-            }
-        }
-        String[] ret = new String[configFileList.size()];
-        configFileList.toArray(ret);
-        System.out.println(Arrays.toString(ret));
-        return ret;
-    }    
 }

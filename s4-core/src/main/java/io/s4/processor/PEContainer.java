@@ -42,6 +42,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 public class PEContainer implements Runnable, AsynchronousEventProcessor {
     private static Logger logger = Logger.getLogger(PEContainer.class);
     BlockingQueue<EventWrapper> workQueue;
@@ -50,9 +53,47 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
     private Clock clock;
     private int maxQueueSize = 1000;
     private boolean trackByKey;
-    private Map<String, Integer> countByEventType = Collections.synchronizedMap(new HashMap<String, Integer>());
+    private Map<String, Integer> countByEventType = Collections
+            .synchronizedMap(new HashMap<String, Integer>());
 
     private ControlEventProcessor controlEventProcessor = null;
+    List<List<EventAdvice>> adviceLists = new ArrayList<List<EventAdvice>>();
+    
+    private PEGraph peGraph;
+
+    public PEContainer() {
+
+    }
+
+    @Inject
+    public PEContainer(Monitor monitor, Clock clock,
+            @Named("pe_container.max_queue_size") int maxQueueSize,
+            @Named("pe_container.track_by_key") boolean trackByKey) {
+        super();
+        this.monitor = monitor;
+        this.clock = clock;
+        this.maxQueueSize = maxQueueSize;
+        this.trackByKey = trackByKey;
+
+        logger.debug("Constructor " + monitor.toString() + " "
+                + maxQueueSize + " " + trackByKey);
+            }
+    
+    
+    /**
+     * @return the peGraph
+     */
+    public PEGraph getPeGraph() {
+        return peGraph;
+    }
+
+    /**
+     * @param peGraph the peGraph to set
+     */
+    public void setPeGraph(PEGraph peGraph) {
+        this.peGraph = peGraph;
+        logger.debug("Set PEGraph");
+    }
 
     public void setMaxQueueSize(int maxQueueSize) {
         this.maxQueueSize = maxQueueSize;
@@ -75,7 +116,7 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
     }
 
     public void addProcessor(ProcessingElement processor) {
-        System.out.println("adding pe: " + processor);
+        logger.info("adding pe: " + processor);
         PrototypeWrapper pw = new PrototypeWrapper(processor, clock);
         prototypeWrappers.add(pw);
         adviceLists.add(pw.advise());
@@ -93,13 +134,15 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
         this.controlEventProcessor = cep;
     }
 
-    public PEContainer() {
-
+    /**
+     * @return the prototypeWrappers
+     */
+    public List<PrototypeWrapper> getPrototypeWrappers() {
+        return prototypeWrappers;
     }
 
-    List<List<EventAdvice>> adviceLists = new ArrayList<List<EventAdvice>>();
-
     public void init() {
+        peGraph.create();
         workQueue = new LinkedBlockingQueue<EventWrapper>(maxQueueSize);
         for (PrototypeWrapper pw : prototypeWrappers) {
             adviceLists.add(pw.advise());
@@ -125,17 +168,14 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
             isAddSucceed = workQueue.offer(eventWrapper);
             if (monitor != null) {
                 if (isAddSucceed) {
-                    monitor.increment(pecontainer_ev_nq_ct.toString(),
-                                      1,
-                                      S4_CORE_METRICS.toString());
-                } else {
-                    monitor.increment(pecontainer_msg_drop_ct.toString(),
-                                      1,
-                                      S4_CORE_METRICS.toString());
-                }
-                monitor.set(pecontainer_qsz.toString(),
-                            getQueueSize(),
+                    monitor.increment(pecontainer_ev_nq_ct.toString(), 1,
                             S4_CORE_METRICS.toString());
+                } else {
+                    monitor.increment(pecontainer_msg_drop_ct.toString(), 1,
+                            S4_CORE_METRICS.toString());
+                }
+                monitor.set(pecontainer_qsz.toString(), getQueueSize(),
+                        S4_CORE_METRICS.toString());
             }
         } catch (Exception e) {
             logger.error("metrics name doesn't exist", e);
@@ -186,7 +226,8 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                 }
                 if (trackByKey) {
                     boolean foundOne = false;
-                    for (CompoundKeyInfo compoundKeyInfo : eventWrapper.getCompoundKeys()) {
+                    for (CompoundKeyInfo compoundKeyInfo : eventWrapper
+                            .getCompoundKeys()) {
                         foundOne = true;
                         updateCount(eventWrapper.getStreamName() + " "
                                 + compoundKeyInfo.getCompoundKey());
@@ -205,9 +246,8 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                 // Logger.getLogger("s4").debug(
                 // "Incoming: " + event.getEventName());
                 if (monitor != null) {
-                    monitor.increment(pecontainer_ev_dq_ct.toString(),
-                                      1,
-                                      S4_CORE_METRICS.toString());
+                    monitor.increment(pecontainer_ev_dq_ct.toString(), 1,
+                            S4_CORE_METRICS.toString());
                 }
                 // printPlainPartitionInfoList(event.getCompoundKeyList());
 
@@ -227,7 +267,7 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                     if (ctrlEvent) {
                         if (controlEventProcessor != null) {
                             controlEventProcessor.process(eventWrapper,
-                                                          prototypeWrappers.get(i));
+                                    prototypeWrappers.get(i));
                         }
 
                         continue;
@@ -237,8 +277,8 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                     List<EventAdvice> adviceList = adviceLists.get(i);
                     for (EventAdvice eventAdvice : adviceList) {
                         if (eventAdvice.getEventName().equals("*")
-                                || eventAdvice.getEventName()
-                                              .equals(eventWrapper.getStreamName())) {
+                                || eventAdvice.getEventName().equals(
+                                        eventWrapper.getStreamName())) {
                             // event name matches
                         } else {
                             continue;
@@ -246,18 +286,19 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
 
                         if (eventAdvice.getKey().equals("*")) {
                             invokePE(prototypeWrappers.get(i).getPE("*"),
-                                     eventWrapper,
-                                     null);
+                                    eventWrapper, null);
                             continue;
                         }
 
-                        for (CompoundKeyInfo compoundKeyInfo : eventWrapper.getCompoundKeys()) {
-                            if (eventAdvice.getKey()
-                                           .equals(compoundKeyInfo.getCompoundKey())) {
-                                invokePE(prototypeWrappers.get(i)
-                                                          .getPE(compoundKeyInfo.getCompoundValue()),
-                                         eventWrapper,
-                                         compoundKeyInfo);
+                        for (CompoundKeyInfo compoundKeyInfo : eventWrapper
+                                .getCompoundKeys()) {
+                            if (eventAdvice.getKey().equals(
+                                    compoundKeyInfo.getCompoundKey())) {
+                                invokePE(
+                                        prototypeWrappers.get(i).getPE(
+                                                compoundKeyInfo
+                                                        .getCompoundValue()),
+                                        eventWrapper, compoundKeyInfo);
                             }
                         }
                     }
@@ -267,55 +308,44 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                 if (monitor != null) {
                     // TODO: need to be changed for more accurate calc
                     monitor.increment(pecontainer_exec_elapse_time.toString(),
-                                      (int) (endTime - startTime),
-                                      S4_CORE_METRICS.toString());
+                            (int) (endTime - startTime),
+                            S4_CORE_METRICS.toString());
                 }
             } catch (InterruptedException ie) {
                 Logger.getLogger("s4").warn("PEContainer is interrupted", ie);
                 return;
             } catch (Exception e) {
-                Logger.getLogger("s4")
-                      .error("Exception choosing processing element to run", e);
+                Logger.getLogger("s4").error(
+                        "Exception choosing processing element to run", e);
             }
         }
     }
 
     private void invokePE(ProcessingElement pe, EventWrapper eventWrapper,
-                          CompoundKeyInfo compoundKeyInfo) {
+            CompoundKeyInfo compoundKeyInfo) {
         try {
             long startTime = System.currentTimeMillis();
-            pe.execute(eventWrapper.getStreamName(),
-                       compoundKeyInfo,
-                       eventWrapper.getEvent());
+            pe.execute(eventWrapper.getStreamName(), compoundKeyInfo,
+                    eventWrapper.getEvent());
             long endTime = System.currentTimeMillis();
             if (monitor != null) {
-                monitor.increment(pecontainer_ev_process_ct.toString(),
-                                  1,
-                                  S4_CORE_METRICS.toString());
-                monitor.increment(pecontainer_ev_process_ct.toString(),
-                                  1,
-                                  S4_APP_METRICS.toString(),
-                                  "at",
-                                  pe.getId());
+                monitor.increment(pecontainer_ev_process_ct.toString(), 1,
+                        S4_CORE_METRICS.toString());
+                monitor.increment(pecontainer_ev_process_ct.toString(), 1,
+                        S4_APP_METRICS.toString(), "at", pe.getId());
                 monitor.increment(pecontainer_exec_elapse_time.toString(),
-                                  (int) (endTime - startTime),
-                                  S4_APP_METRICS.toString(),
-                                  "at",
-                                  pe.getId());
+                        (int) (endTime - startTime), S4_APP_METRICS.toString(),
+                        "at", pe.getId());
             }
         } catch (Exception e) {
             if (monitor != null) {
-                monitor.increment(pecontainer_ev_err_ct.toString(),
-                                  1,
-                                  S4_CORE_METRICS.toString());
-                monitor.increment(pecontainer_ev_err_ct.toString(),
-                                  1,
-                                  S4_APP_METRICS.toString(),
-                                  "at",
-                                  pe.getId());
+                monitor.increment(pecontainer_ev_err_ct.toString(), 1,
+                        S4_CORE_METRICS.toString());
+                monitor.increment(pecontainer_ev_err_ct.toString(), 1,
+                        S4_APP_METRICS.toString(), "at", pe.getId());
             }
-            Logger.getLogger("s4")
-                  .error("Exception running processing element", e);
+            Logger.getLogger("s4").error(
+                    "Exception running processing element", e);
         }
 
     }
@@ -338,35 +368,31 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                         peCount += pw.getPECount();
                         if (monitor != null) {
                             monitor.set(pecontainer_pe_ct.toString(),
-                                        pw.getPECount(),
-                                        S4_APP_METRICS.toString(),
-                                        "at",
-                                        pw.getId());
+                                    pw.getPECount(), S4_APP_METRICS.toString(),
+                                    "at", pw.getId());
                         }
                     }
 
                     Logger.getLogger("s4").info("PE count " + peCount);
                     if (monitor != null) {
-                        monitor.set(pecontainer_pe_ct.toString(),
-                                    peCount,
-                                    S4_CORE_METRICS.toString());
+                        monitor.set(pecontainer_pe_ct.toString(), peCount,
+                                S4_CORE_METRICS.toString());
                         monitor.set(pecontainer_qsz_w.toString(),
-                                    getQueueSize(),
-                                    S4_CORE_METRICS.toString());
+                                getQueueSize(), S4_CORE_METRICS.toString());
                     }
 
                     if (trackByKey) {
                         for (String key : countByEventType.keySet()) {
                             Integer countObj = countByEventType.get(key);
                             if (countObj != null) {
-                                Logger.getLogger("s4").info("Count by " + key
-                                        + ": " + countObj);
+                                Logger.getLogger("s4").info(
+                                        "Count by " + key + ": " + countObj);
                             }
                         }
                     }
                 } catch (Exception e) {
-                    Logger.getLogger("s4")
-                          .error("Exception running PEContainer watcher", e);
+                    Logger.getLogger("s4").error(
+                            "Exception running PEContainer watcher", e);
                 } finally {
                     try {
                         Thread.sleep(10000);

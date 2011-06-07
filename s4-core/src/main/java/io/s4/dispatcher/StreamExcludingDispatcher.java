@@ -19,10 +19,23 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 public class StreamExcludingDispatcher implements EventDispatcher {
 
     private EventDispatcher dispatcher = null;
 
+    @Inject
+    public StreamExcludingDispatcher(
+            @Named("ctrl_dispatcher_adapter") EventDispatcher dispatcher,
+            @Named("adapter_app_name") String streamName) {
+        super();
+        this.dispatcher = dispatcher;
+        String[] streams = { streamName };
+        setStreams(streams);
+    }
+    
     public void setDispatcher(EventDispatcher dispatcher) {
         this.dispatcher = dispatcher;
     }

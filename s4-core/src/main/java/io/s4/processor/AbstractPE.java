@@ -34,6 +34,8 @@ import java.util.StringTokenizer;
 
 import org.apache.log4j.Logger;
 
+import com.google.inject.Inject;
+
 /**
  * This is the base class for processor classes. While it is possible to create
  * a processor class by implementing the {@link ProcessingElement} interface, we
@@ -59,6 +61,7 @@ public abstract class AbstractPE implements ProcessingElement {
         }
     }
 
+    protected static Logger logger = Logger.getLogger(AbstractPE.class);
     private Clock clock;
     private int outputFrequency = 1;
     private FrequencyType outputFrequencyType = FrequencyType.EVENTCOUNT;
@@ -76,7 +79,8 @@ public abstract class AbstractPE implements ProcessingElement {
     private long pauseTimeInMillis;
     private boolean logPauses = false;
     private String initMethod = null;
-    
+    private PEContainer peContainer;
+
     public void setSaveKeyRecord(boolean saveKeyRecord) {
         this.saveKeyRecord = saveKeyRecord;
     }
@@ -99,36 +103,50 @@ public abstract class AbstractPE implements ProcessingElement {
             this.notify();
         }
     }
+    
+    @Inject
+    public void setPEContainer(PEContainer peContainer) {
+        this.peContainer = peContainer;
+        peContainer.addProcessor(this);
+        logger.debug("setPEContainer");
+    }
+    
+    public PEContainer getPEContainer() {
+        return peContainer;
+    }
 
     /**
-     * The name of a method to be used as an initializer.  The method will be
+     * The name of a method to be used as an initializer. The method will be
      * called after the object is cloned from the prototype PE.
      */
-    public void setInitMethod(String initMethod)
-    {
-       this.initMethod = initMethod;
+    public void setInitMethod(String initMethod) {
+        this.initMethod = initMethod;
     }
-    
+
     public String getInitMethod() {
-       return this.initMethod;
+        return this.initMethod;
     }
-    
+
     public Clock getClock() {
         return clock;
     }
 
     private OverloadDispatcher overloadDispatcher;
 
-    public AbstractPE() {
-        OverloadDispatcherGenerator oldg = new OverloadDispatcherGenerator(this.getClass());
-        Class<?> overloadDispatcherClass = oldg.generate();
-
-        try {
-            overloadDispatcher = (OverloadDispatcher) overloadDispatcherClass.newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+//    public AbstractPE() {
+//        OverloadDispatcherGenerator oldg = new OverloadDispatcherGenerator(
+//                this.getClass());
+//        Class<?> overloadDispatcherClass = oldg.generate();
+//
+//        try {
+//            overloadDispatcher = (OverloadDispatcher) overloadDispatcherClass
+//                    .newInstance();
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
+//        
+//        logger.debug("Constructor ");
+//    }
 
     /**
      * This implements the <code>execute</code> method declared in the
@@ -136,7 +154,7 @@ public abstract class AbstractPE implements ProcessingElement {
      * Instead, you need to implement the <code>processEvent</code> method.
      **/
     public void execute(String streamName, CompoundKeyInfo compoundKeyInfo,
-                        Object event) {
+            Object event) {
         // if this is the first time through, get the key for this PE
         if (keyValue == null || saveKeyRecord) {
             setKeyValue(event, compoundKeyInfo);
@@ -161,8 +179,8 @@ public abstract class AbstractPE implements ProcessingElement {
                     output();
                 } catch (Exception e) {
                     Logger.getLogger("s4")
-                          .error("Exception calling output() method in execute()",
-                                 e);
+                            .error("Exception calling output() method in execute()",
+                                    e);
                 }
             }
         }
@@ -216,10 +234,12 @@ public abstract class AbstractPE implements ProcessingElement {
             Property property = null;
             for (KeyPathElement keyPathElement : keyInfo.getKeyPath()) {
                 if (keyPathElement instanceof KeyPathElementIndex) {
-                    record = list.get(((KeyPathElementIndex) keyPathElement).getIndex());
+                    record = list.get(((KeyPathElementIndex) keyPathElement)
+                            .getIndex());
                     schema = property.getComponentProperty().getSchema();
                 } else {
-                    String keyPathElementName = ((KeyPathElementName) keyPathElement).getKeyName();
+                    String keyPathElementName = ((KeyPathElementName) keyPathElement)
+                            .getKeyName();
                     property = schema.getProperties().get(keyPathElementName);
                     value = null;
                     try {
@@ -230,8 +250,9 @@ public abstract class AbstractPE implements ProcessingElement {
                     }
 
                     if (value == null) {
-                        Logger.getLogger("s4").error("Value for "
-                                + keyPathElementName + " is null!");
+                        Logger.getLogger("s4")
+                                .error("Value for " + keyPathElementName
+                                        + " is null!");
                         return;
                     }
 
@@ -247,8 +268,8 @@ public abstract class AbstractPE implements ProcessingElement {
                         continue;
                     } else if (property.isList()) {
                         try {
-                            list = (List) property.getGetterMethod()
-                                                  .invoke(record);
+                            list = (List) property.getGetterMethod().invoke(
+                                    record);
                         } catch (Exception e) {
                             Logger.getLogger("s4").error(e);
                             return;
@@ -330,6 +351,19 @@ public abstract class AbstractPE implements ProcessingElement {
     }
 
     /**
+     * This method sets the output strategy and sets the value for the strategy.
+     * 
+     * @see io.s4.processor.AbstractPE.setOutputFrequencyByTimeBoundary(int)
+     * @see io.s4.processor.AbstractPE.setOutputFrequencyByEventCount(int)
+     */
+    protected void setOutputFrequency(FrequencyType frequencyType,
+            int outputFrequency) {
+        this.outputFrequency = outputFrequency;
+        this.outputFrequencyType = frequencyType;
+        initFrequency();
+    }
+
+    /**
      * Set the offset from the time boundary at which
      * <code>AbstractProcessor</code> should call <code>output</code>.
      * <p>
@@ -348,7 +382,8 @@ public abstract class AbstractPE implements ProcessingElement {
     public void setKeys(String[] keys) {
         for (String key : keys) {
             StringTokenizer st = new StringTokenizer(key);
-            eventAdviceList.add(new EventAdvice(st.nextToken(), st.nextToken()));
+            eventAdviceList
+                    .add(new EventAdvice(st.nextToken(), st.nextToken()));
         }
     }
 
@@ -447,16 +482,17 @@ public abstract class AbstractPE implements ProcessingElement {
                             pe.output();
                             outputCount++;
                         } catch (Exception e) {
-                            Logger.getLogger("s4")
-                                  .error("Exception calling output() method", e);
+                            Logger.getLogger("s4").error(
+                                    "Exception calling output() method", e);
                         }
 
                         if (outputCount == outputsBeforePause) {
                             if (logPauses) {
-                                Logger.getLogger("s4").info("Pausing "
-                                        + getId() + " at count " + outputCount
-                                        + " for " + pauseTimeInMillis
-                                        + " milliseconds");
+                                Logger.getLogger("s4").info(
+                                        "Pausing " + getId() + " at count "
+                                                + outputCount + " for "
+                                                + pauseTimeInMillis
+                                                + " milliseconds");
                             }
                             outputCount = 0;
                             try {

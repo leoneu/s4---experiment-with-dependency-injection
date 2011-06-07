@@ -63,7 +63,7 @@ public class TopicCountAndReportPE extends AbstractPE {
             return;
         }
         TopicSeen topicSeen = new TopicSeen((String) this.getKeyValue().get(0),
-                                            count);
+                count);
         topicSeen.setReportKey("1");
         dispatcher.dispatchEvent(outputStreamName, topicSeen);
     }

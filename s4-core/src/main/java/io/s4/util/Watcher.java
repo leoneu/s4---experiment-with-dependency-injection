@@ -19,56 +19,42 @@ import static io.s4.util.MetricsName.S4_CORE_METRICS;
 import static io.s4.util.MetricsName.s4_core_exit_ct;
 import static io.s4.util.MetricsName.s4_core_free_mem;
 import io.s4.logger.Monitor;
-import io.s4.persist.Persister;
+//import io.s4.persist.Persister;
 import io.s4.processor.AsynchronousEventProcessor;
 
 import java.io.File;
 import java.text.MessageFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
+//import java.text.SimpleDateFormat;
+//import java.util.ArrayList;
+//import java.util.Date;
 
 import org.apache.log4j.Logger;
 
 public class Watcher implements Runnable {
-    Runtime rt = Runtime.getRuntime();
-    AsynchronousEventProcessor peContainer;
-    Persister persister;
-    Persister localPersister;
-    String configFilename;
-    long configFileTime = -1;
-    Monitor monitor;
+    private Runtime rt = Runtime.getRuntime();
+    private AsynchronousEventProcessor peContainer;
+    // private Persister persister;
+    // private Persister localPersister;
+    private String configFilename;
+    private long configFileTime = -1;
+    private Monitor monitor;
 
-    public void setMonitor(Monitor monitor) {
-        this.monitor = monitor;
-    }
-
+    // private ArrayList<byte[]> memoryHog = new ArrayList<byte[]>();
     private long minimumMemory = 200 * 1024 * 1024;
 
-    SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+    // private SimpleDateFormat dateFormatter = new
+    // SimpleDateFormat("yyyyMMdd HH:mm:ss");
 
-    public void setMinimumMemory(long minimumMemory) {
-        this.minimumMemory = minimumMemory;
-    }
-
-    public void setPeContainer(AsynchronousEventProcessor peContainer) {
-        this.peContainer = peContainer;
-    }
-
-    public void setPersister(Persister persister) {
-        this.persister = persister;
-    }
-
-    public void setLocalPersister(Persister localPersister) {
-        this.localPersister = localPersister;
-    }
-
-    public void setConfigFilename(String configFilename) {
-        this.configFilename = configFilename;
-    }
-
+    
     public Watcher() {
 
+    }
+
+    public Watcher(AsynchronousEventProcessor peContainer, Monitor monitor) {
+        super();
+        this.peContainer = peContainer;
+        this.monitor = monitor;
+        init();
     }
 
     public void init() {
@@ -79,19 +65,17 @@ public class Watcher implements Runnable {
     public void run() {
         try {
             while (true) {
-                String stringTime = dateFormatter.format(new Date());
+                // String stringTime = dateFormatter.format(new Date());
 
                 String template1 = "{0,number,#######0} waiting processing";
-                Logger.getLogger("s4")
-                      .info(MessageFormat.format(template1,
-                                                 peContainer.getQueueSize()));
+                Logger.getLogger("s4").info(
+                        MessageFormat.format(template1,
+                                peContainer.getQueueSize()));
 
                 String template2 = "Total: {0,number,#######0}, max {1,number,#######0}, free {2,number,#######0}";
-                Logger.getLogger("s4")
-                      .info(MessageFormat.format(template2,
-                                                 rt.totalMemory(),
-                                                 rt.maxMemory(),
-                                                 rt.freeMemory()));
+                Logger.getLogger("s4").info(
+                        MessageFormat.format(template2, rt.totalMemory(),
+                                rt.maxMemory(), rt.freeMemory()));
                 memoryCheck();
                 configCheck();
                 try {
@@ -100,16 +84,14 @@ public class Watcher implements Runnable {
                 }
             }
         } catch (Exception e) {
-            Logger.getLogger("s4")
-                  .warn("Some sort of exception in Watcher thread", e);
+            Logger.getLogger("s4").warn(
+                    "Some sort of exception in Watcher thread", e);
             try {
                 Thread.sleep(30000);
             } catch (Exception ie) {
             }
         }
     }
-
-    private ArrayList<byte[]> memoryHog = new ArrayList<byte[]>();
 
     private void memoryCheck() {
         long total = rt.totalMemory();
@@ -120,17 +102,17 @@ public class Watcher implements Runnable {
         try {
             if (monitor != null) {
                 monitor.set(s4_core_free_mem.toString(),
-                            (int) (actualFree / 1024 / 1024.0),
-                            S4_CORE_METRICS.toString());
+                        (int) (actualFree / 1024 / 1024.0),
+                        S4_CORE_METRICS.toString());
             }
 
             if (actualFree < minimumMemory) {
-                Logger.getLogger("s4").error("Too little memory remaining: "
-                        + actualFree + ". Exiting so process can be restarted");
+                Logger.getLogger("s4").error(
+                        "Too little memory remaining: " + actualFree
+                                + ". Exiting so process can be restarted");
                 if (monitor != null) {
-                    monitor.set(s4_core_exit_ct.toString(),
-                                1,
-                                S4_CORE_METRICS.toString());
+                    monitor.set(s4_core_exit_ct.toString(), 1,
+                            S4_CORE_METRICS.toString());
                 }
                 System.exit(3);
             }
@@ -161,9 +143,8 @@ public class Watcher implements Runnable {
             Logger.getLogger("s4").info("Config file has changed. Exiting!!");
             try {
                 if (monitor != null) {
-                    monitor.set(s4_core_exit_ct.toString(),
-                                1,
-                                S4_CORE_METRICS.toString());
+                    monitor.set(s4_core_exit_ct.toString(), 1,
+                            S4_CORE_METRICS.toString());
                 }
             } catch (Exception e) {
                 Logger.getLogger("s4").error("metrics name doesn't exist: ", e);
@@ -171,4 +152,29 @@ public class Watcher implements Runnable {
             System.exit(4);
         }
     }
+
+//    public void setMonitor(Monitor monitor) {
+//        this.monitor = monitor;
+//    }
+
+//    public void setMinimumMemory(long minimumMemory) {
+//        this.minimumMemory = minimumMemory;
+//    }
+
+//    public void setPeContainer(AsynchronousEventProcessor peContainer) {
+//        this.peContainer = peContainer;
+//    }
+
+    // public void setPersister(Persister persister) {
+    // this.persister = persister;
+    // }
+
+    // public void setLocalPersister(Persister localPersister) {
+    // this.localPersister = localPersister;
+    // }
+
+    public void setConfigFilename(String configFilename) {
+        this.configFilename = configFilename;
+    }
+
 }

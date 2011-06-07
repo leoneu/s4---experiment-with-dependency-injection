@@ -19,9 +19,22 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 public class StreamSelectingDispatcher implements EventDispatcher {
 
     private EventDispatcher dispatcher = null;
+
+    @Inject
+    public StreamSelectingDispatcher(
+            @Named("ctrl_dispatcher_adapter") EventDispatcher dispatcher,
+            @Named("adapter_app_name") String streamName) {
+        super();
+        this.dispatcher = dispatcher;
+        String[] streams = { streamName };
+        setStreams(streams);
+    }
 
     public void setDispatcher(EventDispatcher dispatcher) {
         this.dispatcher = dispatcher;
@@ -43,7 +56,7 @@ public class StreamSelectingDispatcher implements EventDispatcher {
 
     @Override
     public void dispatchEvent(String streamName,
-                              List<List<String>> compoundKeyNames, Object event) {
+            List<List<String>> compoundKeyNames, Object event) {
         if (dispatcher != null && streams != null
                 && streams.contains(streamName)) {
             dispatcher.dispatchEvent(streamName, compoundKeyNames, event);

@@ -21,7 +21,22 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 public class Log4jMonitor extends TimerTask implements Monitor {
+
+    @Inject
+    public Log4jMonitor(@Named("logger.name") String loggerName,
+            @Named("logger.flush_interval") int flushInterval) {
+        super();
+        this.loggerName = loggerName;
+        this.flushInterval = flushInterval;
+        init();
+    }
+
+    public Log4jMonitor() {}
+    
     Map<String, Integer> metricMap = new ConcurrentHashMap<String, Integer>();
     private String loggerName = "s4";
     private int flushInterval = 600; // default is every 10 minutes
@@ -39,9 +54,8 @@ public class Log4jMonitor extends TimerTask implements Monitor {
 
     public void init() {
         if (flushInterval > 0) {
-            timer.scheduleAtFixedRate(this,
-                                      flushInterval * 1000,
-                                      flushInterval * 1000);
+            timer.scheduleAtFixedRate(this, flushInterval * 1000,
+                    flushInterval * 1000);
         }
     }
 
@@ -51,7 +65,8 @@ public class Log4jMonitor extends TimerTask implements Monitor {
     }
 
     public void flushStats() {
-        org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(loggerName);
+        org.apache.log4j.Logger logger = org.apache.log4j.Logger
+                .getLogger(loggerName);
         for (String key : metricMap.keySet()) {
             String message = key + " = " + metricMap.get(key);
             logger.info(message);
@@ -86,23 +101,24 @@ public class Log4jMonitor extends TimerTask implements Monitor {
     }
 
     @Override
-    public void increment(String metricName, int increment, String metricEventName, String... furtherDistinctions) {
-        increment(buildMetricName(metricName,
-                                  metricEventName,
-                                  furtherDistinctions),
-                  increment);
+    public void increment(String metricName, int increment,
+            String metricEventName, String... furtherDistinctions) {
+        increment(
+                buildMetricName(metricName, metricEventName,
+                        furtherDistinctions), increment);
 
     }
 
     @Override
-    public void set(String metricName, int value, String metricEventName, String... furtherDistinctions) {
-        metricMap.put(buildMetricName(metricName,
-                                      metricEventName,
-                                      furtherDistinctions),
-                      value);
+    public void set(String metricName, int value, String metricEventName,
+            String... furtherDistinctions) {
+        metricMap.put(
+                buildMetricName(metricName, metricEventName,
+                        furtherDistinctions), value);
     }
 
-    private String buildMetricName(String metricName, String metricEventName, String[] furtherDistinctions) {
+    private String buildMetricName(String metricName, String metricEventName,
+            String[] furtherDistinctions) {
         StringBuffer sb = new StringBuffer(metricEventName);
         sb.append(":");
         sb.append(metricName);

@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import com.google.inject.Inject;
+
 public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
     private List<List<String>> keyNameTuple = new ArrayList<List<String>>();
     private boolean debug = false;
@@ -35,6 +37,16 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
     private String delimiter = ":";
     private boolean fastPath = false;
 
+    @Inject
+    public DefaultPartitioner(String[] hashKeys, Hasher hasher, String[] streams) {
+        super();
+        setHashKey(hashKeys);
+        setHasher(hasher);
+        setStreamNames(streams);
+    }
+
+    public DefaultPartitioner() {}
+    
     public void setDelimiter(String delimiter) {
         this.delimiter = delimiter;
     }
@@ -68,13 +80,13 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
     private SchemaContainer schemaContainer = new SchemaContainer();
 
     public List<CompoundKeyInfo> partition(String streamName, Object event,
-                                           int partitionCount) {
+            int partitionCount) {
         return partition(streamName, keyNameTuple, event, partitionCount);
     }
 
     public List<CompoundKeyInfo> partition(String streamName,
-                                           List<List<String>> compoundKeyNames,
-                                           Object event, int partitionCount) {
+            List<List<String>> compoundKeyNames, Object event,
+            int partitionCount) {
 
         if (streamName != null && streamNameSet != null
                 && !streamNameSet.contains(streamName)) {
@@ -111,7 +123,7 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
         // fast path for single top-level key
         if (fastPath
                 || (compoundKeyNames.size() == 1 && compoundKeyNames.get(0)
-                                                                    .size() == 1)) {
+                        .size() == 1)) {
             String simpleKeyName = compoundKeyNames.get(0).get(0);
             if (debug) {
                 System.out.println("Using fast path!");
@@ -148,9 +160,8 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
             partitionInfo.setCompoundValue(stringValue);
             partitionInfoList.add(partitionInfo);
             if (debug) {
-                System.out.printf("Value %s, partition id %d\n",
-                                  stringValue,
-                                  partitionInfo.getPartitionId());
+                System.out.printf("Value %s, partition id %d\n", stringValue,
+                        partitionInfo.getPartitionId());
             }
             return partitionInfoList;
         }
@@ -161,12 +172,8 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
         for (List<String> simpleKeyPath : compoundKeyNames) {
             List<KeyInfo> keyInfoList = new ArrayList<KeyInfo>();
             KeyInfo keyInfo = new KeyInfo();
-            keyInfoList = getKeyValues(event,
-                                       schema,
-                                       simpleKeyPath,
-                                       0,
-                                       keyInfoList,
-                                       keyInfo);
+            keyInfoList = getKeyValues(event, schema, simpleKeyPath, 0,
+                    keyInfoList, keyInfo);
             if (keyInfoList == null || keyInfoList.size() == 0) {
                 if (debug) {
                     System.out.println("Null value encountered");
@@ -194,8 +201,9 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
                     compoundValue += (compoundValue.length() > 0 ? delimiter
                             : "")
                             + keyInfoList.get(keyInfoList.size() - 1)
-                                         .getValue();
-                    partitionInfo.addKeyInfo(keyInfoList.get(keyInfoList.size() - 1));
+                                    .getValue();
+                    partitionInfo
+                            .addKeyInfo(keyInfoList.get(keyInfoList.size() - 1));
                 }
             }
 
@@ -205,9 +213,8 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
             partitionInfo.setCompoundValue(compoundValue);
             partitionInfoList.add(partitionInfo);
             if (debug) {
-                System.out.printf("Value %s, partition id %d\n",
-                                  compoundValue,
-                                  partitionInfo.getPartitionId());
+                System.out.printf("Value %s, partition id %d\n", compoundValue,
+                        partitionInfo.getPartitionId());
             }
         }
 
@@ -220,8 +227,7 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
 
         // choose a random int from [0, partitionCount-1]
         int partitionId = (int) Math.min(partitionCount - 1,
-                                         Math.floor(Math.random()
-                                                 * partitionCount));
+                Math.floor(Math.random() * partitionCount));
 
         partitionInfo.setPartitionId(partitionId);
         List<CompoundKeyInfo> partitionInfoList = new ArrayList<CompoundKeyInfo>();
@@ -233,17 +239,14 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
     private void printKeyInfoList(List<KeyInfo> keyInfoList) {
         for (KeyInfo aKeyInfo : keyInfoList) {
             System.out.printf("Path: %s; full path %s; value %s\n",
-                              aKeyInfo.toString(),
-                              aKeyInfo.toString(true),
-                              aKeyInfo.getValue());
+                    aKeyInfo.toString(), aKeyInfo.toString(true),
+                    aKeyInfo.getValue());
         }
     }
 
     private List<KeyInfo> getKeyValues(Object record, Schema schema,
-                                       List<String> keyNameElements,
-                                       int elementIndex,
-                                       List<KeyInfo> keyInfoList,
-                                       KeyInfo keyInfo) {
+            List<String> keyNameElements, int elementIndex,
+            List<KeyInfo> keyInfoList, KeyInfo keyInfo) {
         String keyElement = keyNameElements.get(elementIndex);
         Property property = schema.getProperties().get(keyElement);
         if (property == null) {
@@ -270,29 +273,22 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
             // TODO: handle case where key does not include property of
             // component type
             Schema componentSchema = property.getComponentProperty()
-                                             .getSchema();
+                    .getSchema();
             int listLength = list.size();
             for (int i = 0; i < listLength; i++) {
                 Object listEntry = list.get(i);
                 KeyInfo keyInfoForListEntry = keyInfo.copy();
                 keyInfoForListEntry.addElementToPath(i);
-                Object partialList = getKeyValues(listEntry,
-                                                  componentSchema,
-                                                  keyNameElements,
-                                                  elementIndex + 1,
-                                                  keyInfoList,
-                                                  keyInfoForListEntry);
+                Object partialList = getKeyValues(listEntry, componentSchema,
+                        keyNameElements, elementIndex + 1, keyInfoList,
+                        keyInfoForListEntry);
                 if (partialList == null) {
                     return null;
                 }
             }
         } else if (property.getSchema() != null) {
-            return getKeyValues(value,
-                                property.getSchema(),
-                                keyNameElements,
-                                elementIndex + 1,
-                                keyInfoList,
-                                keyInfo);
+            return getKeyValues(value, property.getSchema(), keyNameElements,
+                    elementIndex + 1, keyInfoList, keyInfo);
         } else {
             keyInfo.setValue(String.valueOf(value));
             keyInfoList.add(keyInfo);
@@ -301,51 +297,51 @@ public class DefaultPartitioner implements Partitioner, VariableKeyPartitioner {
         return keyInfoList;
     }
 
-    public static void main(String args[]) {
-        DefaultPartitioner dp1 = new DefaultPartitioner();
-        DefaultPartitioner dp2 = new DefaultPartitioner();
-        dp1.setDebug(true);
-        dp1.setHashKey(new String[] { "array1/val1", "array1/val2", "query" });
-        dp1.setHasher(new DefaultHasher());
-
-        dp2.setDebug(true);
-        dp2.setHashKey(new String[] { "user" });
-        dp2.setHasher(new DefaultHasher());
-
-        Map<String, Object> event = new HashMap<String, Object>();
-        event.put("user", "fred");
-        event.put("query", "timex watch");
-        List<Map<String, Object>> array1 = new ArrayList<Map<String, Object>>();
-        Map<String, Object> element = new HashMap<String, Object>();
-        element.put("val1", new Long(72));
-        element.put("val2", new Long(11));
-        array1.add(element);
-        element = new HashMap<String, Object>();
-        element.put("val1", new Long(21));
-        element.put("val2", new Long(12));
-        array1.add(element);
-        event.put("array1", array1);
-
-        dp1.partition("test", event, 4);
-        System.out.println("------------");
-        dp2.partition("test", event, 4);
-        System.out.println("------------");
-        event = new HashMap<String, Object>();
-
-        event.put("query", "timex watch");
-        array1 = new ArrayList<Map<String, Object>>();
-        element = new HashMap<String, Object>();
-        element.put("val1", new Long(72));
-        element.put("val2", new Long(11));
-        array1.add(element);
-        element = new HashMap<String, Object>();
-
-        element.put("val2", new Long(12));
-        array1.add(element);
-        event.put("array1", array1);
-
-        dp1.partition("test", event, 4);
-        System.out.println("------------");
-        dp2.partition("test", event, 4);
-    }
+    // public static void main(String args[]) {
+    // DefaultPartitioner dp1 = new DefaultPartitioner();
+    // DefaultPartitioner dp2 = new DefaultPartitioner();
+    // dp1.setDebug(true);
+    // dp1.setHashKey(new String[] { "array1/val1", "array1/val2", "query" });
+    // dp1.setHasher(new DefaultHasher());
+    //
+    // dp2.setDebug(true);
+    // dp2.setHashKey(new String[] { "user" });
+    // dp2.setHasher(new DefaultHasher());
+    //
+    // Map<String, Object> event = new HashMap<String, Object>();
+    // event.put("user", "fred");
+    // event.put("query", "timex watch");
+    // List<Map<String, Object>> array1 = new ArrayList<Map<String, Object>>();
+    // Map<String, Object> element = new HashMap<String, Object>();
+    // element.put("val1", new Long(72));
+    // element.put("val2", new Long(11));
+    // array1.add(element);
+    // element = new HashMap<String, Object>();
+    // element.put("val1", new Long(21));
+    // element.put("val2", new Long(12));
+    // array1.add(element);
+    // event.put("array1", array1);
+    //
+    // dp1.partition("test", event, 4);
+    // System.out.println("------------");
+    // dp2.partition("test", event, 4);
+    // System.out.println("------------");
+    // event = new HashMap<String, Object>();
+    //
+    // event.put("query", "timex watch");
+    // array1 = new ArrayList<Map<String, Object>>();
+    // element = new HashMap<String, Object>();
+    // element.put("val1", new Long(72));
+    // element.put("val2", new Long(11));
+    // array1.add(element);
+    // element = new HashMap<String, Object>();
+    //
+    // element.put("val2", new Long(12));
+    // array1.add(element);
+    // event.put("array1", array1);
+    //
+    // dp1.partition("test", event, 4);
+    // System.out.println("------------");
+    // dp2.partition("test", event, 4);
+    // }
 }

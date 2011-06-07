@@ -37,4 +37,5 @@
         init-method="init">
     <property name="dispatcher" ref="dispatcher"/>
   </bean>
+
 </beans>

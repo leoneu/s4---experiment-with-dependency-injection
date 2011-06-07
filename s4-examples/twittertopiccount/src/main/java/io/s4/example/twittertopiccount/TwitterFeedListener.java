@@ -99,7 +99,8 @@ public class TwitterFeedListener implements EventProducer, Runnable {
 
         URLConnection connection = url.openConnection();
         String userPassword = userid + ":" + password;
-        String encoded = EncodingUtil.getAsciiString(Base64.encodeBase64(EncodingUtil.getAsciiBytes(userPassword)));
+        String encoded = EncodingUtil.getAsciiString(Base64
+                .encodeBase64(EncodingUtil.getAsciiBytes(userPassword)));
         connection.setRequestProperty("Authorization", "Basic " + encoded);
         connection.connect();
 
@@ -143,15 +144,15 @@ public class TwitterFeedListener implements EventProducer, Runnable {
                         try {
                             handler.processEvent(ew);
                         } catch (Exception e) {
-                            Logger.getLogger("s4")
-                                  .error("Exception in raw event handler", e);
+                            Logger.getLogger("s4").error(
+                                    "Exception in raw event handler", e);
                         }
                     }
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 } catch (Exception e) {
-                    Logger.getLogger("s4")
-                          .error("Exception processing message", e);
+                    Logger.getLogger("s4").error(
+                            "Exception processing message", e);
                 }
             }
         }
