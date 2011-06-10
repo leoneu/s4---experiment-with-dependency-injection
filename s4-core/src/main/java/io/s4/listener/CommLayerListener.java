@@ -61,7 +61,7 @@ public class CommLayerListener implements EventListener, Runnable {
     @Inject
     public CommLayerListener(
             @Named("listener.max_queue_size") int maxQueueSize,
-            @Named("zk.address") String clusterManagerAddress, String appName,
+            @Named("zk.address") String clusterManagerAddress, @Named("s4_app_name") String appName,
             Monitor monitor, SerializerDeserializer serDeser) {
         super();
         this.maxQueueSize = maxQueueSize;
@@ -69,7 +69,7 @@ public class CommLayerListener implements EventListener, Runnable {
         this.appName = appName;
         this.monitor = monitor;
         this.serDeser = serDeser;
-
+        logger.debug("Constructor: appName: " + appName);
         init();
     }
 

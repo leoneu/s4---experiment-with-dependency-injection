@@ -58,7 +58,7 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
 
     private ControlEventProcessor controlEventProcessor = null;
     List<List<EventAdvice>> adviceLists = new ArrayList<List<EventAdvice>>();
-    
+
     private PEGraph peGraph;
 
     public PEContainer() {
@@ -75,11 +75,10 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
         this.maxQueueSize = maxQueueSize;
         this.trackByKey = trackByKey;
 
-        logger.debug("Constructor " + monitor.toString() + " "
-                + maxQueueSize + " " + trackByKey);
-            }
-    
-    
+        logger.debug("Constructor " + monitor.toString() + " " + maxQueueSize
+                + " " + trackByKey);
+    }
+
     /**
      * @return the peGraph
      */
@@ -88,7 +87,8 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
     }
 
     /**
-     * @param peGraph the peGraph to set
+     * @param peGraph
+     *            the peGraph to set
      */
     public void setPeGraph(PEGraph peGraph) {
         this.peGraph = peGraph;
@@ -178,7 +178,7 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                         S4_CORE_METRICS.toString());
             }
         } catch (Exception e) {
-            logger.error("metrics name doesn't exist", e);
+            logger.error("Metrics name doesn't exist.", e);
         }
     }
 
@@ -239,12 +239,6 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                 }
 
                 startTime = System.currentTimeMillis();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("STEP 5 (PEContainer): workQueue.take - "
-                            + eventWrapper.toString());
-                }
-                // Logger.getLogger("s4").debug(
-                // "Incoming: " + event.getEventName());
                 if (monitor != null) {
                     monitor.increment(pecontainer_ev_dq_ct.toString(), 1,
                             S4_CORE_METRICS.toString());
@@ -255,13 +249,6 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
 
                 // execute the PEs interested in this event
                 for (int i = 0; i < prototypeWrappers.size(); i++) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("STEP 6 (PEContainer): prototypeWrappers("
-                                + i + ") - "
-                                + prototypeWrappers.get(i).toString() + " - "
-                                + eventWrapper.getStreamName());
-                    }
-
                     // first check if this is a control message and handle it if
                     // so.
                     if (ctrlEvent) {
@@ -312,11 +299,10 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                             S4_CORE_METRICS.toString());
                 }
             } catch (InterruptedException ie) {
-                Logger.getLogger("s4").warn("PEContainer is interrupted", ie);
+                logger.warn("PEContainer is interrupted.", ie);
                 return;
             } catch (Exception e) {
-                Logger.getLogger("s4").error(
-                        "Exception choosing processing element to run", e);
+                logger.error("Exception choosing processing element to run.", e);
             }
         }
     }
@@ -344,8 +330,7 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                 monitor.increment(pecontainer_ev_err_ct.toString(), 1,
                         S4_APP_METRICS.toString(), "at", pe.getId());
             }
-            Logger.getLogger("s4").error(
-                    "Exception running processing element", e);
+            logger.error("Exception running processing element.", e);
         }
 
     }
@@ -372,8 +357,7 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                                     "at", pw.getId());
                         }
                     }
-
-                    Logger.getLogger("s4").info("PE count " + peCount);
+                    logger.info("PE count " + peCount);
                     if (monitor != null) {
                         monitor.set(pecontainer_pe_ct.toString(), peCount,
                                 S4_CORE_METRICS.toString());
@@ -385,14 +369,12 @@ public class PEContainer implements Runnable, AsynchronousEventProcessor {
                         for (String key : countByEventType.keySet()) {
                             Integer countObj = countByEventType.get(key);
                             if (countObj != null) {
-                                Logger.getLogger("s4").info(
-                                        "Count by " + key + ": " + countObj);
+                                logger.info("Count by " + key + ": " + countObj);
                             }
                         }
                     }
                 } catch (Exception e) {
-                    Logger.getLogger("s4").error(
-                            "Exception running PEContainer watcher", e);
+                    logger.error("Exception running PEContainer watcher.", e);
                 } finally {
                     try {
                         Thread.sleep(10000);

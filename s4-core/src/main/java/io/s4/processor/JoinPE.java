@@ -16,7 +16,6 @@
 package io.s4.processor;
 
 import io.s4.dispatcher.EventDispatcher;
-import io.s4.logger.Monitor;
 import io.s4.schema.Schema;
 import io.s4.schema.Schema.Property;
 import io.s4.schema.SchemaContainer;
@@ -34,7 +33,6 @@ public class JoinPE extends AbstractPE {
     private Map<String, List<String>> eventFields = new HashMap<String, List<String>>();
     private Map<String, Object> eventsToJoin;
     private EventDispatcher dispatcher;
-    private Monitor monitor;
     private String id = "JoinPE";
     private String outputStreamName;
     private String outputClassName;
@@ -50,10 +48,6 @@ public class JoinPE extends AbstractPE {
 
     public void setDispatcher(EventDispatcher dispatcher) {
         this.dispatcher = dispatcher;
-    }
-
-    public void setMonitor(Monitor monitor) {
-        this.monitor = monitor;
     }
 
     public void setOutputStreamName(String outputStreamName) {
@@ -77,7 +71,7 @@ public class JoinPE extends AbstractPE {
         for (String includeField : includeFields) {
             StringTokenizer st = new StringTokenizer(includeField);
             if (st.countTokens() != 2) {
-                Logger.getLogger("s4").error("Bad include field specified: "
+                logger.error("Bad include field specified: "
                         + includeField);
                 continue;
             }
@@ -102,7 +96,6 @@ public class JoinPE extends AbstractPE {
 
     @Override
     public void output() {
-        // TODO Auto-generated method stub
 
     }
 
@@ -158,9 +151,6 @@ public class JoinPE extends AbstractPE {
             }
 
             dispatcher.dispatchEvent(outputStreamName, newEvent);
-            if (logger.isDebugEnabled()) {
-                logger.debug("STEP 7 (JoinPE): " + newEvent.toString());
-            }
         }
     }
 

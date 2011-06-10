@@ -49,6 +49,7 @@ public class CommLayerEmitter implements EventEmitter, Runnable {
         this.listener = listener;
         this.listenerAppName = listenerAppName;
         this.monitor = monitor;
+        logger.debug("Constructor. " + serDeser + " " + listener + " " + listenerAppName);
         
         init();
     }

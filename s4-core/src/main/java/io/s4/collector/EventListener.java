@@ -25,6 +25,8 @@ import io.s4.processor.PEContainer;
 
 import org.apache.log4j.Logger;
 
+import com.google.inject.Inject;
+
 public class EventListener implements EventHandler {
     private static Logger logger = Logger.getLogger(EventListener.class);
     private int eventCount = 0;
@@ -56,9 +58,17 @@ public class EventListener implements EventHandler {
         return eventCount;
     }
 
-    public EventListener() {
-
+    @Inject
+    public EventListener(AsynchronousEventProcessor eventProcessor,
+            io.s4.listener.EventListener rawListener, Monitor monitor) {
+        super();
+        this.eventProcessor = eventProcessor;
+        this.rawListener = rawListener;
+        this.monitor = monitor;
+        
+        init();
     }
+
 
     public void init() {
         rawListener.addHandler(this);
@@ -68,10 +78,6 @@ public class EventListener implements EventHandler {
         try {
             synchronized (this) {
                 eventCount++;
-            }
-            if (logger.isDebugEnabled()) {
-                logger.debug("STEP 3 (EventListener): peContainer.addEvent - "
-                        + eventWrapper.getEvent().toString());
             }
             eventProcessor.queueWork(eventWrapper);
 

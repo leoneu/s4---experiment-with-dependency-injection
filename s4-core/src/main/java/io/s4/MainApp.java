@@ -15,6 +15,7 @@
  */
 package io.s4;
 
+import io.s4.collector.EventListener;
 import io.s4.processor.PEContainer;
 import io.s4.processor.ProcessingElement;
 import io.s4.processor.PrototypeWrapper;
@@ -159,6 +160,8 @@ public class MainApp {
 
         /* Initialize the PEContainer. */
         peContainer.init();
+        
+        injector.getInstance(EventListener.class);
 
         List<PrototypeWrapper> prototypeWrappers = peContainer
                 .getPrototypeWrappers();

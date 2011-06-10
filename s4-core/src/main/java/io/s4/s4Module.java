@@ -23,6 +23,7 @@ import io.s4.listener.CommLayerListener;
 import io.s4.listener.EventListener;
 import io.s4.logger.Log4jMonitor;
 import io.s4.logger.Monitor;
+import io.s4.processor.AsynchronousEventProcessor;
 import io.s4.processor.PEContainer;
 import io.s4.serialize.KryoSerDeser;
 import io.s4.serialize.SerializerDeserializer;
@@ -93,7 +94,7 @@ public class S4Module extends AbstractModule {
         // Constructor:
         // CommLayerEmitter(SerializerDeserializer serDeser, CommLayerListener listener, 
         // @Named("s4_app_name") String listenerAppName, Monitor monitor) 
-        bind(EventEmitter.class).to(CommLayerEmitter.class);
+        bind(EventEmitter.class).to(CommLayerEmitter.class).asEagerSingleton();
         
         // Constructor:
         // public CommLayerListener(
@@ -101,6 +102,7 @@ public class S4Module extends AbstractModule {
         // @Named("zk.address") String clusterManagerAddress, String appName,
         // Monitor monitor, SerializerDeserializer serDeser) 
         bind(EventListener.class).to(CommLayerListener.class);
+        bind(CommLayerListener.class).asEagerSingleton();
         
         // Constructor:
         // Log4jMonitor(@Named("logger.name") String loggerName,
@@ -115,6 +117,7 @@ public class S4Module extends AbstractModule {
         // @Named("pe_container.max_queue_size") int maxQueueSize,
         // @Named("pe_container.track_by_key") boolean trackByKey) {
         bind(PEContainer.class).asEagerSingleton();
-
+        bind(AsynchronousEventProcessor.class).to(PEContainer.class);
+        
     }
 }

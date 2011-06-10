@@ -22,7 +22,7 @@ public class PEGraph implements io.s4.processor.PEGraph {
     PEGraph(PropertiesConfiguration config, PEContainer peContainer) {
         this.config = config;
         this.peContainer = peContainer;
-        logger.debug("Constructor. config= " + config.getBasePath());
+        logger.debug("Constructor. config= " + config.getFileName());
         peContainer.setPeGraph(this);
     }
 
@@ -60,6 +60,8 @@ public class PEGraph implements io.s4.processor.PEGraph {
         topNTopicPE.setPersistTime(config.getInt("pe.top_n_topic.persist_time"));
         topNTopicPE.setPersistKey(config.getString("pe.top_n_topic.persist_key"));
         topNTopicPE.setTtl(config.getInt("pe.top_n_topic.ttl"));
+        topicCountAndReportPE.setKeys(config
+                .getStringArray("pe.top_n_topic.keys"));
         peContainer.addProcessor(topNTopicPE);
 
     }

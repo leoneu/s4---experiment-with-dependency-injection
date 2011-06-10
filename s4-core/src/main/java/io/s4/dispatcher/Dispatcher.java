@@ -20,6 +20,7 @@ import io.s4.dispatcher.partitioner.CompoundKeyInfo;
 import io.s4.dispatcher.partitioner.Partitioner;
 import io.s4.dispatcher.partitioner.VariableKeyPartitioner;
 import io.s4.dispatcher.transformer.Transformer;
+import io.s4.emitter.CommLayerEmitter;
 import io.s4.emitter.EventEmitter;
 
 import java.io.File;
@@ -33,6 +34,7 @@ import org.apache.log4j.Logger;
 import com.google.inject.Inject;
 
 public class Dispatcher implements EventDispatcher {
+    private static Logger logger = Logger.getLogger(Dispatcher.class);
     private EventEmitter eventEmitter;
     private Transformer[] transformers = new Transformer[0];
     private Partitioner[] partitioners = new Partitioner[0];
@@ -53,6 +55,7 @@ public class Dispatcher implements EventDispatcher {
 
     @Inject
     public void setEventEmitter(EventEmitter eventEmitter) {
+        logger.debug("setEventEmitter: " + eventEmitter);
         this.eventEmitter = eventEmitter;
     }
 
@@ -148,6 +151,7 @@ public class Dispatcher implements EventDispatcher {
 
     @Override
     public void dispatchEvent(String streamName, Object event) {
+        logger.debug("dispatchEvent - streamName: " + streamName + " event: " + event);
         dispatchEvent(streamName, event, false, null);
     }
 

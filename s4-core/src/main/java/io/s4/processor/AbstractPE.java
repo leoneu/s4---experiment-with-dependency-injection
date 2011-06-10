@@ -133,20 +133,20 @@ public abstract class AbstractPE implements ProcessingElement {
 
     private OverloadDispatcher overloadDispatcher;
 
-//    public AbstractPE() {
-//        OverloadDispatcherGenerator oldg = new OverloadDispatcherGenerator(
-//                this.getClass());
-//        Class<?> overloadDispatcherClass = oldg.generate();
-//
-//        try {
-//            overloadDispatcher = (OverloadDispatcher) overloadDispatcherClass
-//                    .newInstance();
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        }
-//        
-//        logger.debug("Constructor ");
-//    }
+    public AbstractPE() {
+        OverloadDispatcherGenerator oldg = new OverloadDispatcherGenerator(
+                this.getClass());
+        Class<?> overloadDispatcherClass = oldg.generate();
+
+        try {
+            overloadDispatcher = (OverloadDispatcher) overloadDispatcherClass
+                    .newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        
+        logger.debug("Constructor ");
+    }
 
     /**
      * This implements the <code>execute</code> method declared in the
@@ -380,11 +380,13 @@ public abstract class AbstractPE implements ProcessingElement {
     }
 
     public void setKeys(String[] keys) {
+
         for (String key : keys) {
             StringTokenizer st = new StringTokenizer(key);
             eventAdviceList
                     .add(new EventAdvice(st.nextToken(), st.nextToken()));
         }
+        logger.debug("advise: " + advise());
     }
 
     private void initFrequency() {
