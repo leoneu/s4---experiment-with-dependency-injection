@@ -31,6 +31,9 @@ import org.json.JSONObject;
 import com.google.gson.Gson;
 
 public class TopNTopicPE extends AbstractPE {
+    
+    protected static Logger logger = Logger.getLogger(TopNTopicPE.class);
+
     private String id;
     private Persister persister;
     private int entryCount = 10;
@@ -101,6 +104,8 @@ public class TopNTopicPE extends AbstractPE {
 
     @Override
     public void output() {
+        logger.debug("Start output.");
+        
         List<TopNEntry> sortedList = new ArrayList<TopNEntry>();
 
         for (String key : topicMap.keySet()) {
@@ -125,6 +130,9 @@ public class TopNTopicPE extends AbstractPE {
             }
             message.put("topN", jsonTopN);
             persister.set(persistKey, message.toString()+"\n", persistTime);
+            
+            logger.debug(message.toString());
+            
         } catch (Exception e) {
             Logger.getLogger("s4").error(e);
         }

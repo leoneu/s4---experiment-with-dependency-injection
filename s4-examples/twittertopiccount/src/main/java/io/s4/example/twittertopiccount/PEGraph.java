@@ -60,7 +60,7 @@ public class PEGraph implements io.s4.processor.PEGraph {
         topNTopicPE.setPersistTime(config.getInt("pe.top_n_topic.persist_time"));
         topNTopicPE.setPersistKey(config.getString("pe.top_n_topic.persist_key"));
         topNTopicPE.setTtl(config.getInt("pe.top_n_topic.ttl"));
-        topicCountAndReportPE.setKeys(config
+        topNTopicPE.setKeys(config
                 .getStringArray("pe.top_n_topic.keys"));
         peContainer.addProcessor(topNTopicPE);
 

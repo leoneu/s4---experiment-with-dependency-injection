@@ -34,6 +34,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Binder;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import java.lang.annotation.Target;
@@ -88,17 +90,17 @@ public class Module extends AbstractModule {
                 config.getString("persister.output_name"));
         
         bind(PropertiesConfiguration.class).toInstance(config);
-        bind(io.s4.processor.PEGraph.class).to(PEGraph.class).asEagerSingleton();        
-            }
-
-    @Inject private EventEmitter eventEmitter;
-    @Inject private Hasher hasher;
-    @Inject private DefaultPartitioner topicSeenPartitioner;
-    @Inject @Aggregated private DefaultPartitioner aggregatedTopicSeenPartitioner;
-    private Partitioner[] partitioners= {topicSeenPartitioner, aggregatedTopicSeenPartitioner};
+        bind(io.s4.processor.PEGraph.class).to(PEGraph.class).asEagerSingleton();                 
+    }
     
     @Provides
-    Dispatcher provideDispatcher() {
+    Dispatcher provideDispatcher(Injector injector) {
+
+        EventEmitter eventEmitter = injector.getInstance(EventEmitter.class);
+        
+        Partitioner topicSeenPartitioner = injector.getInstance(Partitioner.class);
+        Partitioner aggregatedTopicSeenPartitioner = injector.getInstance(Key.get(Partitioner.class, Aggregated.class));
+        Partitioner[] partitioners= {topicSeenPartitioner, aggregatedTopicSeenPartitioner};
 
         logger.debug("provideDispatcher");
         Dispatcher dispatcher = new Dispatcher();
@@ -106,17 +108,23 @@ public class Module extends AbstractModule {
         dispatcher.setEventEmitter(eventEmitter);
         dispatcher.setLoggerName("s4");
         
+        logger.debug("partitioners[0]: " + partitioners[0] + " partitioners[1]: " + partitioners[1]);
+        
+        logger.debug("eventEmitter: " + eventEmitter.toString());
         dispatcher.init();
 
         return dispatcher;
     }
     
     @Provides
-    Partitioner providePartitioner() {
+    Partitioner providePartitioner(Injector injector) {
 
         logger.debug("providePartitioner");
+        Hasher hasher = injector.getInstance(Hasher.class);
+        
         DefaultPartitioner partitioner = new DefaultPartitioner();
         
+        logger.debug("hasher: " + hasher);
         String[] streams = {"TopicSeen"};
         partitioner.setStreamNames(streams);
         String[] hashKeys = {"topic"};
@@ -127,11 +135,14 @@ public class Module extends AbstractModule {
     }
     
     @Provides @Aggregated
-    Partitioner provideAggregatedPartitioner() {
+    Partitioner provideAggregatedPartitioner(Injector injector) {
 
         logger.debug("provideAggregatedPartitioner");
+        Hasher hasher = injector.getInstance(Hasher.class);
+
         DefaultPartitioner partitioner = new DefaultPartitioner();
 
+        logger.debug("hasher: " + hasher);
         String[] streams = {"AggregatedTopicSeen"};
         partitioner.setStreamNames(streams);
         String[] hashKeys = {"reportKey"};
@@ -140,6 +151,7 @@ public class Module extends AbstractModule {
 
         return partitioner;
     }
+    
     
     @BindingAnnotation @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)
     public @interface Aggregated {}

@@ -32,11 +32,15 @@ import io.s4.persist.Persister;
 public class DirectToFilePersister implements Persister {
     private String outputFilename;
     private int persistCount;
+    
+    protected static Logger logger = Logger.getLogger(DirectToFilePersister.class);
+
 
     @Inject
     public DirectToFilePersister(@Named("outputFilename") String outputFilename) {
         super();
         this.outputFilename = outputFilename;
+        logger.debug("outputFilename: " + outputFilename);
     }
 
     public void setOutputFilename(String outputFilename) {
